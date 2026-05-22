@@ -3,7 +3,6 @@ package me.akshawop.journalApp.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,9 +39,6 @@ public class SignupController {
     @Autowired
     private EmailService emailService;
 
-    @Autowired
-    private KafkaTemplate<String, User> kafka;
-
     @PostMapping
     public ResponseEntity<HttpStatus> signup(@Validated(UserDTO.OnSignup.class) @RequestBody UserDTO userData) {
 
@@ -61,7 +57,7 @@ public class SignupController {
     }
 
     @PostMapping("/validate-otp")
-    public ResponseEntity<User> validateOtpAndSaveUser(
+    public ResponseEntity<UserDTO> validateOtpAndSaveUser(
             @Validated(UserDTO.OnOtpValidate.class) @RequestBody UserDTO body) {
 
         // check if the email already registered
@@ -77,10 +73,10 @@ public class SignupController {
         if (!otpService.validate(body.getEmail(), body.getCode()))
             throw new OTPValidationFailedException("Incorrect OTP provided");
 
-        // save the new user to db and send confirmation mail
+        // save the new user in db
         User savedUser = userService.saveNewUser(tempUser);
+        UserDTO userData = UserDTO.userDTOBuilder(savedUser);
 
-        kafka.send("user.account.created", savedUser);
-        return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
+        return new ResponseEntity<>(userData, HttpStatus.CREATED);
     }
 }

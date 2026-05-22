@@ -149,11 +149,11 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(SQLException.class)
         public ResponseEntity<ErrorResponse> handleDatabase(Exception ex, HttpServletRequest req) {
 
-                log.error("Unhandled exception at [{} {}] -> {}",
+                log.error("Unhandled exception at [{} {}] -> {} :> {}",
                                 req.getMethod(),
                                 req.getRequestURI(),
                                 ex.getMessage(),
-                                ex);
+                                ex.getStackTrace());
 
                 return builder.buildResponse(
                                 HttpStatus.SERVICE_UNAVAILABLE,
@@ -166,11 +166,11 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest req) {
 
-                log.error("Unhandled exception at [{} {}] -> {}",
+                log.error("Unhandled exception at [{} {}] -> {} :> {}",
                                 req.getMethod(),
                                 req.getRequestURI(),
                                 ex.getMessage(),
-                                ex);
+                                ex.getStackTrace());
 
                 return builder.buildResponse(
                                 HttpStatus.INTERNAL_SERVER_ERROR,

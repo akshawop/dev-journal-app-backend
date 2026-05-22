@@ -1,6 +1,6 @@
 package me.akshawop.journalApp.service;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,7 +30,10 @@ public class UserService {
     private GenerateUsername genUsername;
 
     @Autowired
-    private KafkaTemplate<String, String> kafka;
+    private KafkaTemplate<String, User> kafkaCreatedTopic;
+
+    @Autowired
+    private KafkaTemplate<String, UUID> kafkaDeletedTopic;
 
     @SuppressWarnings("null")
     public User saveNewUser(@NonNull UserDTO userData) {
@@ -59,10 +62,14 @@ public class UserService {
                 .email(userData.getEmail())
                 .password(userData.getPassword())
                 .username(username)
-                .roles(new ArrayList<>(List.of(UserRoles.USER)))
+                .roles(Collections.singletonList(UserRoles.USER))
                 .build();
 
-        return userRepo.save(user);
+        user = userRepo.save(user);
+        kafkaCreatedTopic.send("user.account.created", user);
+
+        return user;
+
     }
 
     public List<User> getAllUsers() {
@@ -79,34 +86,13 @@ public class UserService {
                 .orElse(null);
     }
 
-    // public void updateUser(@NonNull User oldUser, @NonNull User newUserData) {
-    // // update and store the new data
-    // oldUser.setUsername(newUserData.getUsername());
-    // oldUser.setPassword(passwordEncoder.encode(newUserData.getPassword()));
-
-    // userRepo.save(oldUser);
-    // }
-
-    // public void updateUserAdmin(@NonNull User oldUser, @NonNull User newUserData)
-    // {
-    // // update and store the new data
-    // oldUser.setUsername(newUserData.getUsername());
-    // oldUser.setPassword(passwordEncoder.encode(newUserData.getPassword()));
-    // if (!newUserData.getRoles().isEmpty())
-    // oldUser.setRoles(newUserData.getRoles());
-    // if (newUserData.getJoiningDate() != null)
-    // oldUser.setJoiningDate(newUserData.getJoiningDate());
-
-    // userRepo.save(oldUser);
-    // }
-
     @Transactional
     public void deleteUserByUsername(@NonNull String username) {
         User user = userRepo.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username, UserNotFoundException.USERNAME));
 
         userRepo.deleteByUsername(user.getUsername());
-        kafka.send("user.account.deleted", user.getId().toString());
+        kafkaDeletedTopic.send("user.account.deleted", user.getId());
     }
 
     public void makeAdmin(@NonNull String username) {
@@ -118,10 +104,7 @@ public class UserService {
         userRepo.save(user);
     }
 
-    public User changeUsername(String oldUsername, String newUsername) {
-
-        User user = userRepo.findByUsername(oldUsername)
-                .orElseThrow(() -> new UserNotFoundException(oldUsername, UserNotFoundException.USERNAME));
+    public User changeUsername(User user, String newUsername) {
 
         if (userRepo.findByUsername(newUsername).isPresent()) {
             throw new UsernameAlreadyTakenException("Username " + newUsername

@@ -1,17 +1,18 @@
 package me.akshawop.journalApp.repository;
 
 import java.util.List;
+import java.util.UUID;
 
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import me.akshawop.journalApp.entity.JournalEntry;
 
 @Repository
-public interface JournalEntryRepo extends MongoRepository<JournalEntry, String> {
-    List<JournalEntry> findAllByUserId(String userId);
+public interface JournalEntryRepo extends JpaRepository<JournalEntry, Integer> {
+    List<JournalEntry> findAllByUserId(UUID userId);
 
-    void deleteByUserId(String userId);
+    void deleteByUserId(UUID userId);
 
-    void deleteAllByUserId(String userId);
+    void deleteAllByUserId(UUID userId);
 }

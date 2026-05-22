@@ -1,14 +1,10 @@
 spring:
     redis:
-        host: <uri>
+        host: <domain>
         port: <port>
-    data:
-        mongodb:
-            uri: <db-uri>
-            database: <db-name>
-            auto-index-creation: true
+
     datasource:
-        url: <db-uri>
+        url: jdbc:postgresql://<domain>:<port>/<db-name>
         username: <db-username>
         password: <db-password>
     jpa:
@@ -19,7 +15,7 @@ spring:
         host: <provider>
         port: <port>
         username: <email>
-        password: <password>
+        password: <app-password>
         properties:
             mail:
                 smtp:

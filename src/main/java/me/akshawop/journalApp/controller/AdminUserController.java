@@ -48,7 +48,7 @@ public class AdminUserController {
     }
 
     @DeleteMapping
-    public ResponseEntity<HttpStatus> deleteUser(
+    public ResponseEntity<HttpStatus> deleteUserByUsername(
             @NotEmpty(message = "username value is required in query parameter") @Size(min = 4, max = 20, message = "username must be between 4 to 20 characters") @RequestParam String username) {
 
         userService.deleteUserByUsername(username);

@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import me.akshawop.journalApp.entity.User;
+import me.akshawop.journalApp.entity.UserDetailsImpl;
+import me.akshawop.journalApp.model.UserDTO;
 import me.akshawop.journalApp.service.UserService;
 
 @RestController
@@ -27,24 +29,28 @@ public class UserController {
     private UserService userService;
 
     @GetMapping
-    public ResponseEntity<User> getUserDetails() {
+    public ResponseEntity<UserDTO> getUserDetails() {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
 
         User user = userService.getUserByUsername(username);
-        return new ResponseEntity<>(user, HttpStatus.OK);
+        UserDTO userData = UserDTO.userDTOBuilder(user);
+
+        return new ResponseEntity<>(userData, HttpStatus.OK);
     }
 
     @PatchMapping("/change-username")
-    public ResponseEntity<User> changeUsername(
+    public ResponseEntity<UserDTO> changeUsername(
             @NotEmpty(message = "username value is required in query parameter") @Size(min = 4, max = 20, message = "username must be between 4 to 20 characters") @RequestParam String username) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String oldUsername = auth.getName();
+        User user = ((UserDetailsImpl) auth.getPrincipal()).getUser();
 
-        User user = userService.changeUsername(oldUsername, username);
-        return new ResponseEntity<>(user, HttpStatus.OK);
+        user = userService.changeUsername(user, username);
+        UserDTO userData = UserDTO.userDTOBuilder(user);
+
+        return new ResponseEntity<>(userData, HttpStatus.OK);
     }
 
     @DeleteMapping

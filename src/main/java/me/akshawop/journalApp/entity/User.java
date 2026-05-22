@@ -1,24 +1,28 @@
 package me.akshawop.journalApp.entity;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Table(name = "app_user", indexes = {
-        @Index(name = "idx_user_username", columnList = "username"),
-        @Index(name = "idx_user_email", columnList = "email")
+        @Index(name = "idx_user_username", columnList = "username", unique = true),
+        @Index(name = "idx_user_email", columnList = "email", unique = true)
 })
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 public class User {
 
     @Id
@@ -35,12 +39,15 @@ public class User {
 
     @Column(nullable = false)
     @NonNull
-    @JsonIgnore
     private String password;
 
-    @Column(name = "joining_date", nullable = false)
-    @Builder.Default
-    private LocalDateTime joiningDate = LocalDateTime.now();
+    @Column(name = "joining_date", nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP")
+    @CreatedDate
+    private Instant joiningDate;
+
+    @Column(name = "updated_at", nullable = false, columnDefinition = "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP")
+    @LastModifiedDate
+    private Instant updatedAt;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))

@@ -1,20 +1,33 @@
 package me.akshawop.journalApp.model;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
 import org.hibernate.validator.constraints.Length;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import me.akshawop.journalApp.entity.User;
 import me.akshawop.journalApp.util.RegexPatterns;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserDTO {
+        private UUID id;
+        private String username;
+
         @NotBlank(message = "Email is required", groups = { OnSignup.class, OnLogin.class, OnOtpValidate.class })
         @Size(max = 100, message = "Email should not exceed 100 characters", groups = { OnSignup.class, OnLogin.class,
                         OnOtpValidate.class })
@@ -26,7 +39,10 @@ public class UserDTO {
                         OnSignup.class, OnLogin.class })
         String password;
 
-        @NotBlank(message = "No code provided", groups = OnOtpValidate.class)
+        private Instant joiningDate;
+        private List<String> roles;
+
+        @NotBlank(message = "No verification code provided", groups = OnOtpValidate.class)
         @Length(min = 6, max = 6, message = "Code should be of 6 digits", groups = OnOtpValidate.class)
         String code;
 
@@ -39,5 +55,15 @@ public class UserDTO {
         }
 
         public static interface OnLogin {
+        }
+
+        public static UserDTO userDTOBuilder(User user) {
+                return UserDTO.builder()
+                                .id(user.getId())
+                                .username(user.getUsername())
+                                .email(user.getEmail())
+                                .joiningDate(user.getJoiningDate())
+                                .roles(user.getRoles())
+                                .build();
         }
 }

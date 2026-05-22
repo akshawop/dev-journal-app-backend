@@ -63,6 +63,23 @@ public class KafkaConsumerConfig {
         }
 
         @Bean
+        public ConcurrentKafkaListenerContainerFactory<String, Object> manualImmediateFactory() {
+
+                ConsumerFactory<String, Object> consumerFactory = new DefaultKafkaConsumerFactory<>(
+                                baseConsumerProps(),
+                                new StringDeserializer(),
+                                new JsonDeserializer<>());
+
+                ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
+                factory.setConsumerFactory(consumerFactory);
+                // Manual ack
+                factory.getContainerProperties().setAckMode(
+                                ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+
+                return factory;
+        }
+
+        @Bean
         public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
 
                 ConsumerFactory<String, Object> consumerFactory = new DefaultKafkaConsumerFactory<>(

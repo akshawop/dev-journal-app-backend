@@ -12,19 +12,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import me.akshawop.journalApp.entity.JournalEntry;
+import me.akshawop.journalApp.exception.JournalNotFoundException;
 import me.akshawop.journalApp.service.JournalEntryService;
+import me.akshawop.journalApp.util.OtherUtils;
 
 @RestController
 @RequestMapping("/admin/journal")
 public class AdminJournalEntryController {
 
     @Autowired
-    private JournalEntryService userService;
+    private JournalEntryService journalService;
 
     @GetMapping
     public ResponseEntity<List<JournalEntry>> getAllJournalEntries() {
 
-        List<JournalEntry> entries = userService.getAllEntries();
+        List<JournalEntry> entries = journalService.getAllEntries();
         if (entries.isEmpty())
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         return new ResponseEntity<>(entries, HttpStatus.OK);
@@ -33,14 +35,16 @@ public class AdminJournalEntryController {
     @GetMapping("/id/{id}")
     public ResponseEntity<JournalEntry> getJournalEntryById(@PathVariable String id) {
 
-        JournalEntry entry = userService.getEntryByIdAdmin(id);
+        Integer journalId = OtherUtils.tryParseInt(id).orElseThrow(() -> new JournalNotFoundException(id));
+        JournalEntry entry = journalService.getEntryByIdAdmin(journalId);
         return new ResponseEntity<>(entry, HttpStatus.OK);
     }
 
     @DeleteMapping("/id/{id}")
     public ResponseEntity<HttpStatus> deleteJournalById(@PathVariable String id) {
 
-        userService.deleteEntryByIdAdmin(id);
+        Integer journalId = OtherUtils.tryParseInt(id).orElseThrow(() -> new JournalNotFoundException(id));
+        journalService.deleteEntryByIdAdmin(journalId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

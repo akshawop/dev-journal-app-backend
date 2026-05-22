@@ -1,37 +1,51 @@
 package me.akshawop.journalApp.entity;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.UUID;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import jakarta.persistence.*;
 import lombok.*;
 
-@Document(collection = "journal_entries")
-@Data
+@Entity
+@Table(name = "journal_entry", indexes = {
+        @Index(name = "idx_journal_created_at", columnList = "created_at")
+})
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 public class JournalEntry {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
+    @Column(nullable = false, length = 200)
     @NonNull
     private String title;
 
+    @Column(nullable = false, columnDefinition = "TEXT")
     @NonNull
     private String content;
 
-    @Field("created_at")
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreatedDate
+    private Instant createdAt;
 
-    @Field("user_id")
+    @Column(name = "updated_at", nullable = false)
+    @LastModifiedDate
+    private Instant updatedAt;
+
+    @Column(name = "user_id", nullable = false)
     @NonNull
-    @JsonIgnore
-    private String userId; // link to postgres user
+    private UUID userId;
+
+    @Version
+    private Long version;
 }

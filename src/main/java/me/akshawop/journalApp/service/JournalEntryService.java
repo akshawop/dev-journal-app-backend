@@ -1,6 +1,7 @@
 package me.akshawop.journalApp.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -8,79 +9,68 @@ import org.springframework.kafka.support.Acknowledgment;
 
 import lombok.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import me.akshawop.journalApp.entity.JournalEntry;
-import me.akshawop.journalApp.entity.User;
 import me.akshawop.journalApp.exception.AccessDeniedException;
 import me.akshawop.journalApp.exception.JournalNotFoundException;
-import me.akshawop.journalApp.exception.UserNotFoundException;
 import me.akshawop.journalApp.model.JournalEntryDTO;
 import me.akshawop.journalApp.repository.JournalEntryRepo;
-import me.akshawop.journalApp.repository.UserRepo;
 
 @Service
 public class JournalEntryService {
     @Autowired
     private JournalEntryRepo journalRepo;
 
-    @Autowired
-    private UserRepo userRepo;
-
     @SuppressWarnings("null")
-    public JournalEntry saveEntry(@NonNull JournalEntryDTO newEntry, @NonNull String username) {
-        User user = userRepo.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username, UserNotFoundException.USERNAME));
+    public JournalEntry saveEntry(@NonNull JournalEntryDTO newEntry, @NonNull UUID userId) {
 
         JournalEntry entry = JournalEntry.builder()
                 .title(newEntry.getTitle())
                 .content(newEntry.getContent())
-                .userId(user.getId().toString())
+                .userId(userId)
                 .build();
 
         return journalRepo.save(entry);
     }
 
-    public JournalEntry getEntryById(String journalId, String username) {
+    public JournalEntry getEntryById(Integer journalId, UUID userId) {
 
         // check if the journal exists
         @SuppressWarnings("null")
         JournalEntry journalEntry = journalRepo.findById(journalId)
-                .orElseThrow(() -> new JournalNotFoundException(journalId));
+                .orElseThrow(() -> new JournalNotFoundException(journalId.toString()));
 
         // checks if the entry belongs to the user
-        User user = userRepo.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username, UserNotFoundException.USERNAME));
-        if (!journalEntry.getUserId().equals(user.getId().toString()))
+        if (!journalEntry.getUserId().equals(userId))
             throw new AccessDeniedException("You are NOT the owner of this journal");
 
         return journalEntry;
     }
 
-    public JournalEntry getEntryByIdAdmin(@NonNull String id) {
-        return (journalRepo.findById(id)).orElseThrow(() -> new JournalNotFoundException(id));
+    public JournalEntry getEntryByIdAdmin(@NonNull Integer id) {
+        return (journalRepo.findById(id)).orElseThrow(() -> new JournalNotFoundException(id.toString()));
     }
 
-    public List<JournalEntry> getAllEntriesForUser(@NonNull String username) {
-        User user = userRepo.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username, UserNotFoundException.USERNAME));
-        return journalRepo.findAllByUserId(user.getId().toString());
+    public List<JournalEntry> getAllEntriesForUser(@NonNull UUID userId) {
+        return journalRepo.findAllByUserId(userId);
     }
 
     public List<JournalEntry> getAllEntries() {
         return journalRepo.findAll();
     }
 
-    public JournalEntry updateEntry(@NonNull String journalId, @NonNull JournalEntryDTO newEntryData,
-            @NonNull String username) {
+    public JournalEntry updateEntry(@NonNull Integer journalId, @NonNull JournalEntryDTO newEntryData,
+            @NonNull UUID userId) {
 
         // check if the journal exists
         JournalEntry oldEntry = journalRepo.findById(journalId)
-                .orElseThrow(() -> new JournalNotFoundException(journalId));
+                .orElseThrow(() -> new JournalNotFoundException(journalId.toString()));
 
         // checks if the entry belongs to the user
-        User user = userRepo.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username, UserNotFoundException.USERNAME));
-        if (!oldEntry.getUserId().equals(user.getId().toString()))
+        if (!oldEntry.getUserId().equals(userId))
             throw new AccessDeniedException("You are NOT authorized to update this journal");
 
         if (newEntryData.getTitle() != null)
@@ -90,33 +80,40 @@ public class JournalEntryService {
         return journalRepo.save(oldEntry);
     }
 
-    public void deleteEntryById(@NonNull String journalId, @NonNull String username) {
+    @Transactional
+    public void deleteEntryById(@NonNull Integer journalId, @NonNull UUID userId) {
         // check if the journal exists
         JournalEntry entry = journalRepo.findById(journalId)
-                .orElseThrow(() -> new JournalNotFoundException(journalId));
+                .orElseThrow(() -> new JournalNotFoundException(journalId.toString()));
 
         // checks if the entry belongs to the user
-        User user = userRepo.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username, UserNotFoundException.USERNAME));
-        if (!entry.getUserId().equals(user.getId().toString()))
+        if (!entry.getUserId().equals(userId))
             throw new AccessDeniedException("You are NOT authorized to delete this journal");
 
         journalRepo.deleteById(journalId);
     }
 
-    public void deleteEntryByIdAdmin(@NonNull String journalId) {
+    @Transactional
+    public void deleteEntryByIdAdmin(@NonNull Integer journalId) {
 
         // check if the journal exists
         journalRepo.findById(journalId)
-                .orElseThrow(() -> new JournalNotFoundException(journalId));
+                .orElseThrow(() -> new JournalNotFoundException(journalId.toString()));
 
         journalRepo.deleteById(journalId);
     }
 
-    @KafkaListener(topics = "user.account.deleted", groupId = "user-deletion-journal-cleanup-group")
-    public void deleteEntryByUserId(String userId, Acknowledgment ack) {
+    @KafkaListener(topics = "user.account.deleted", containerFactory = "manualImmediateFactory", groupId = "user-deletion-journal-cleanup-group")
+    @Transactional
+    public void deleteEntryByUserId(UUID userId, Acknowledgment ack) {
         journalRepo.deleteAllByUserId(userId);
 
-        ack.acknowledge();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        ack.acknowledge();
+                    }
+                });
     }
 }
