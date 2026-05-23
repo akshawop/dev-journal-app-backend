@@ -10,7 +10,7 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>me.akshawop</groupId>
-	<artifactId>springPracticeProject</artifactId>
+	<artifactId>dev-journal-app-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name />
 	<description />

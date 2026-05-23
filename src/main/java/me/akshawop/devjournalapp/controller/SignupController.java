@@ -1,0 +1,82 @@
+package me.akshawop.devjournalapp.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import me.akshawop.devjournalapp.entity.User;
+import me.akshawop.devjournalapp.exception.DuplicateUserRegistrationException;
+import me.akshawop.devjournalapp.exception.GenericNotFoundException;
+import me.akshawop.devjournalapp.exception.OTPValidationFailedException;
+import me.akshawop.devjournalapp.model.UserDTO;
+import me.akshawop.devjournalapp.service.EmailService;
+import me.akshawop.devjournalapp.service.OTPService;
+import me.akshawop.devjournalapp.service.RedisService;
+import me.akshawop.devjournalapp.service.UserService;
+
+@RestController
+@RequestMapping("/signup")
+public class SignupController {
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private OTPService otpService;
+
+    @Autowired
+    private RedisService redis;
+
+    @Autowired
+    private EmailService emailService;
+
+    @PostMapping
+    public ResponseEntity<HttpStatus> signup(@Validated(UserDTO.OnSignup.class) @RequestBody UserDTO userData) {
+
+        // check if the email is already registered
+        if (userService.getUserByEmail(userData.getEmail()) != null)
+            throw new DuplicateUserRegistrationException("This email is already registered");
+
+        // encode the password before saving to redis
+        userData.setPassword(passwordEncoder.encode(userData.getPassword()));
+
+        // generate and send otp to the user's email for verification
+        String otp = otpService.getOTP(userData);
+        emailService.sendOTPVerificationMail(userData.getEmail(), otp);
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @PostMapping("/validate-otp")
+    public ResponseEntity<UserDTO> validateOtpAndSaveUser(
+            @Validated(UserDTO.OnOtpValidate.class) @RequestBody UserDTO body) {
+
+        // check if the email already registered
+        if (userService.getUserByEmail(body.getEmail()) != null)
+            throw new DuplicateUserRegistrationException("This email is already registered");
+
+        // check if the email is waiting in redis for verification
+        UserDTO tempUser = redis.get("OTP:" + body.getEmail(), UserDTO.class);
+        if (tempUser == null)
+            throw new GenericNotFoundException("Not such email found to be waiting for verification");
+
+        // validate the otp
+        if (!otpService.validate(body.getEmail(), body.getCode()))
+            throw new OTPValidationFailedException("Incorrect OTP provided");
+
+        // save the new user in db
+        User savedUser = userService.saveNewUser(tempUser);
+        UserDTO userData = UserDTO.userDTOBuilder(savedUser);
+
+        return new ResponseEntity<>(userData, HttpStatus.CREATED);
+    }
+}
