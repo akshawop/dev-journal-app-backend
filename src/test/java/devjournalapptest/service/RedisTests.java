@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import me.akshawop.devjournalapp.Application;
-import me.akshawop.devjournalapp.entity.User;
-import me.akshawop.devjournalapp.service.RedisService;
+import me.akshawop.devjournalapp.modules.users.repository.entity.User;
+import me.akshawop.devjournalapp.shared.service.RedisService;
 
 @SpringBootTest(classes = Application.class)
 public class RedisTests {
