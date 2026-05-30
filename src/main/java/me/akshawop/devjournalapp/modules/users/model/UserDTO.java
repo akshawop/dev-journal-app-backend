@@ -29,13 +29,15 @@ public class UserDTO {
         private String username;
 
         @NotBlank(message = "Email is required", groups = { OnSignup.class, OnLogin.class, OnOtpValidate.class })
-        @Size(max = 100, message = "Email should not exceed 100 characters", groups = { OnSignup.class, OnLogin.class,
+        @Size(max = 100, message = "Email too long", groups = { OnSignup.class, OnLogin.class,
                         OnOtpValidate.class })
         @Email(regexp = RegexPatterns.EMAIL, message = "Invalid email format", groups = { OnSignup.class, OnLogin.class,
                         OnOtpValidate.class })
         String email;
 
-        @Pattern(regexp = RegexPatterns.PASSWORD, message = "Password must be atleast 8 characters long and contain atleast 1 capital letter, 1 small letter, 1 digit and 1 special character", groups = {
+        @Pattern(regexp = RegexPatterns.PASSWORD, message = "Invalid password format", groups = {
+                        OnSignup.class, OnLogin.class })
+        @Size(max = 100, message = "Password too long", groups = {
                         OnSignup.class, OnLogin.class })
         String password;
 
@@ -43,7 +45,7 @@ public class UserDTO {
         private List<String> roles;
 
         @NotBlank(message = "No verification code provided", groups = OnOtpValidate.class)
-        @Length(min = 6, max = 6, message = "Code should be of 6 digits", groups = OnOtpValidate.class)
+        @Length(min = 6, max = 6, message = "Invalid code entered", groups = OnOtpValidate.class)
         String code;
 
         OTP otp;
